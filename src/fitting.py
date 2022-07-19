@@ -149,3 +149,23 @@ class ModelFitting:
         plt.savefig("./output/temp/fitting/tomography.png")
 
         return center, sigma, fwhm
+
+    @staticmethod
+    def fluorescence_func(t: float, A: float, K: float, C: float):
+        return A * (1 - np.exp(-1 * t / K)) + C
+
+    @staticmethod
+    def diffusion_axelrod1976(time: list[float], fluorescence: list[float]):
+        # create a model and fit
+        model = lmfit.Model(ModelFitting.fluorescence_func, independent_vars=["t"])
+
+        params = model.make_params()
+        params["A"].set(value=10, vary=True)
+        params["K"].set(value=10, vary=True)
+        params["C"].set(value=fluorescence[0], vary=False)
+
+        result = model.fit(fluorescence, t=time, params=params)
+
+        # organize results
+        result_dict = result.params.valuesdict()
+        return result_dict
