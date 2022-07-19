@@ -8,6 +8,16 @@ from utils import mkdir
 class ModelFitting:
     @staticmethod
     def gaussian2d_fit(im, report=False):
+        """2次元ガウス関数でフィッティング
+        lmfitで実装済みのモデルを使用. sigmaはx, y軸で別.
+
+        Args:
+            im (numpy.ndarray): フィッティングする画像
+            report (bool, optional): 詳細な結果を出力する. Defaults to False.
+
+        Returns:
+            tuple: 結果. "中心, シグマ, 半値幅"
+        """
         h, w = im.shape[0], im.shape[1]
         z = im.flatten().astype(np.float64)
 
@@ -19,6 +29,7 @@ class ModelFitting:
         x = np.array(x, dtype=np.float64)
         y = np.array(y, dtype=np.float64)
 
+        # create a model and fit
         model = lmfit.models.Gaussian2dModel()
 
         params = model.make_params()
@@ -29,9 +40,12 @@ class ModelFitting:
         params["sigmay"].set(value=50, min=5, vary=True)
 
         result = model.fit(z, x=x, y=y, params=params)
+
+        # log result
         if report:
             lmfit.report_fit(result)
 
+        # organizing results
         result_dict = result.params.valuesdict()
         amp = result_dict["amplitude"]
         center = result_dict["centerx"], result_dict["centery"]
@@ -46,12 +60,12 @@ class ModelFitting:
         # prediction
         z_pred = model.func(x, y, **result.best_values)
 
-        # show illuminance change
+        # # show illuminance change
         x = [i for i in range(im.shape[1])]
         y = im[center[0], :]
         plt.plot(x, y, color="k")
 
-        # show prediction
+        # # show prediction
         z_pred = z_pred.reshape(h, w)
         y_pred = z_pred[center[0], :]
         plt.plot(x, y_pred, color="b")
@@ -63,6 +77,7 @@ class ModelFitting:
 
     @staticmethod
     def gaussian2D(x, y, amplitude, centerx, centery, sigma):
+        """オリジナルの2次元ガウス関数モデル"""
         dx, dy = centerx - x, centery - y
         index = -1 * (dx ** 2 + dy ** 2) / (2 * sigma * sigma)
         coef = amplitude / (2 * np.pi * sigma * sigma)
@@ -70,6 +85,16 @@ class ModelFitting:
 
     @staticmethod
     def gaussian2d_fit2(im, report=False):
+        """2次元ガウス関数でフィッティング
+        独自のモデルを使用. sigmaはx, y軸で共通.
+
+        Args:
+            im (numpy.ndarray): フィッティングする画像
+            report (bool, optional): 詳細な結果を出力する. Defaults to False.
+
+        Returns:
+            tuple: 結果. "中心, シグマ, 半値幅"
+        """
         h, w = im.shape[0], im.shape[1]
         z = im.flatten().astype(np.float64)
 
@@ -81,6 +106,7 @@ class ModelFitting:
         x = np.array(x, dtype=np.float64)
         y = np.array(y, dtype=np.float64)
 
+        # create a model and fit
         model = lmfit.Model(ModelFitting.gaussian2D, independent_vars=["x", "y"])
 
         params = model.make_params()
@@ -91,9 +117,11 @@ class ModelFitting:
 
         result = model.fit(z, x=x, y=y, params=params)
 
+        # log result
         if report:
             lmfit.report_fit(result)
 
+        # organizing results
         result_dict = result.params.valuesdict()
         amp = result_dict["amplitude"]
         center = result_dict["centerx"], result_dict["centery"]
@@ -107,12 +135,12 @@ class ModelFitting:
         # prediction
         z_pred = model.func(x, y, **result.best_values)
 
-        # show illuminance change
+        # # show illuminance change
         x = [i for i in range(im.shape[1])]
         y = im[center[0], :]
         plt.plot(x, y, color="k")
 
-        # show prediction
+        # # show prediction
         z_pred = z_pred.reshape(h, w)
         y_pred = z_pred[center[0], :]
         plt.plot(x, y_pred, color="b")
