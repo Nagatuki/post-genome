@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import os
 
-import libs.paperplot.plotsetting as ps
 import matplotlib.pyplot as plt
 from matplotlib.pyplot import figure
+
+import paperplot.plotsetting as ps
 
 
 def set_base_profiles(plt):
