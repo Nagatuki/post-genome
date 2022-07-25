@@ -2,6 +2,7 @@ import cv2
 import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
+from scipy.optimize import newton
 
 import imfilter
 from fitting import ModelFitting
@@ -237,27 +238,39 @@ def plot_fluorescence(
     pu.save_fig2(fig, fig_path + "/pdf", fig_name, "pdf")
 
 
-def plot_fluorescence_compare(time: list[int], fluorescence_list: list[list[float]]):
-    """plot fluorescence changes"""
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.plot(time, fluorescence_list[0], color="tab:red", label="0.5σ")  # 0.5 sigma
-    ax.plot(time, fluorescence_list[1], color="tab:green", label="σ")  # 1 sigma
-    ax.plot(time, fluorescence_list[2], color="tab:blue", label="2σ")  # 2 sigma
-    ax.set_xlim([0, 19])
-    ax.set_ylim([0, 100])
-    ax.set_xticks([i for i in range(0, time[-1], 2)])
-    ax.set_xlabel("Time [sec]")
-    ax.set_ylabel("Fluorescence")
-    ax.legend()
-    plt.savefig("./output/result/fluorescence_comp.png")
+def calc_diffusivity_uniform_beam(fluorescence: list[float], radius: float):
+    fluorescence = fluorescence[2:]
+    time = np.arange(0, len(fluorescence), 1)
+
+    result = ModelFitting.fluorescence_fitting(time, fluorescence)
+    plot_fluorescence_fitting(time, fluorescence, result)
+
+    print("Fluorescence recover fitting")
+    print(result)
+
+    T = result["T"]
+    tau_half = np.log(2) * T
+
+    radius = radius * 0.225  # pixel to um
+    D = 0.224 * radius * radius / tau_half
+    return D
 
 
-def plot_fluorescence_fitting(
-    time: list[int], fluorescence_list: list[float], result: dict, suffix: ""
-):
+# def calc_diffusivity_coefficients(fluorescence: list[float], radius: float):
+#     # get K (the bleaching parameter, depends on laser characteristic)
+#     # use Newton's method
+#     FKM, FK0 = fluorescence[1], fluorescence[2]
+#     A = FK0 / FKM
+#     func = lambda K, A: A * K + np.exp(-K) - 1
+#     func_prime = lambda K, A: A - np.exp(-K)
+#     K = newton(func, 100, fprime=func_prime, args=(A))
+#     print(K)
+#     pass
+
+
+def plot_fluorescence_fitting(time: list[int], fluorescence: list[float], result: dict):
     A = result["A"]
-    K = result["K"]
+    K = result["T"]
     C = result["C"]
 
     step = 0.05
@@ -268,28 +281,25 @@ def plot_fluorescence_fitting(
     x = x + 2
 
     # plot
-    fig = plt.figure()
-    ax = fig.add_subplot()
+    pu.set_base_profiles(plt)
 
-    ax.scatter(time, fluorescence_list, color="k")
-    ax.plot(x, y_pred, color="b")
+    fig = plt.figure(figsize=(2, 1.5), dpi=ps.FigDPI)
+    ax = fig.add_subplot(111)
+    pu.set_base_axes_profiles(ax)
 
-    ax.set_xlim([time[0], time[-1]])
-    # ax.set_ylim([0, 100])
-    ax.set_xticks(time)
+    ax.scatter(time, fluorescence, color="k", s=4)
+    ax.plot(x, y_pred, linewidth=ps.LineWidth, color="b")
+    ax.set_xlim([2, 20])
+    ax.set_xticks([2 + i * 2 for i in range(9)])
+    ax.set_ylim([100, 120])
+    ax.set_yticks([100 + i * 5 for i in range(5)])
     ax.set_xlabel("Time [sec]")
-    ax.set_ylabel("Fluorescence")
+    ax.set_ylabel("Fluorescence intensity")
 
-    mkdir("./output/temp/fitting")
-    if suffix == "":
-        plt.savefig("./output/temp/fitting/FRAP.png")
-    else:
-        plt.savefig("./output/temp/fitting/FRAP_{}.png".format(suffix))
-
-
-def calc_diffusivity_coefficients(radius, tau):
-    D = radius * radius / 4 / tau
-    return D
+    fig_path = "./output/temp/fitting"
+    fig_name = "FRAP"
+    pu.save_fig2(fig, fig_path + "/jpg", fig_name, "jpg")
+    pu.save_fig2(fig, fig_path + "/pdf", fig_name, "pdf")
 
 
 def main():
@@ -304,7 +314,7 @@ def main():
 
     # find ROI
     center, radius = find_roi(imgs, True)
-    center_q, radius_q = find_roi_quadratic(imgs, True)
+    center_q, radius_q = find_roi_quadratic(imgs, False)
 
     # examine_roi(imgs, center, sigma)
 
@@ -330,29 +340,17 @@ def main():
     # plot_fluorescence_compare(time, fluorescence_ratio_list)
 
     # # get diffusivity coefficients
-    # diff_coef_list = []
-    # for coef, fluorescence in zip(coef_list, fluorescence_list):
-    #     radius = coef * min(sigma)
-
-    #     fluorescence = fluorescence[2:]
-    #     time = np.arange(len(fluorescence)) * dt
-    #     result = ModelFitting.diffusion_axelrod1976(time, fluorescence)
-
-    #     plot_fluorescence_fitting(time, fluorescence, result, str(coef) + "sigma")
-
-    #     D = calc_diffusivity_coefficients(radius, result["K"])
-    #     diff_coef_list.append(D)
-
-    # print(diff_coef_list)
+    D = calc_diffusivity_uniform_beam(fluorescence, radius)
+    print(D)
 
 
 if __name__ == "__main__":
     # from utils import make_gif
     # make_gif()
 
-    from utils import convert_tiff_to_png
+    # from utils import convert_tiff_to_png
+    # convert_tiff_to_png()
 
-    convert_tiff_to_png()
+    # test()
 
     main()
-    # test()
