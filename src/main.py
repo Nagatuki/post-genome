@@ -116,6 +116,31 @@ def find_roi(imgs, heavy=False):
     return center, sigma
 
 
+def find_roi2(imgs, heavy=False):
+    im_pre, im_post = imgs[1], imgs[2]
+
+    # moving average filter
+    ksize = 9
+    im_pre_filtered = filter.moving_average(im_pre, ksize=ksize)
+    im_post_filtered = filter.moving_average(im_post, ksize=ksize)
+
+    # calc fluorescence difference
+    im_diff = im_pre_filtered - im_post_filtered
+
+    mkdir("./output/temp/find_roi")
+    cv2.imwrite("./output/temp/find_roi/im_diff.png", im_diff)
+
+    # gaussian fitting
+    center, radius = ModelFitting.quadratic2d_fit2(im_diff, True)
+
+    # # check fitting result
+    im_diff_cpy = im_diff.copy()
+    cv2.circle(im_diff_cpy, [center[1], center[0]], radius, color=255, thickness=1)
+    cv2.imwrite("./output/temp/find_roi/found_roi_radius.png", im_diff_cpy)
+
+    return center, [radius, radius]
+
+
 def examine_roi(imgs, center, sigma):
     # find best radius
     sigma_coefs = np.arange(0.2, 3.1, 0.2)
@@ -250,7 +275,8 @@ def main():
     imgs = [cv2.imread(file_path, cv2.IMREAD_GRAYSCALE) for file_path in file_paths]
 
     # find ROI
-    center, sigma = find_roi(imgs)
+    # center, sigma = find_roi(imgs)
+    center, sigma = find_roi2(imgs)
 
     # examine_roi(imgs, center, sigma)
 
