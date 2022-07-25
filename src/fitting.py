@@ -2,6 +2,8 @@ import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
 
+from paperplot import plotsetting as ps
+from paperplot import plotutils as pu
 from utils import mkdir
 
 
@@ -66,19 +68,37 @@ class ModelFitting:
         # prediction
         z_pred = model.func(x, y, **result.best_values)
 
+        # plot log
+        pu.set_base_profiles(plt)
+
+        fig = plt.figure(figsize=(1.5, 1.5), dpi=ps.FigDPI)
+        ax = fig.add_subplot(111)
+        pu.set_base_axes_profiles(ax)
+
+        ax.set_xlabel("x [pixel]")
+        ax.set_ylabel("Luminance (y=center-y)")
+
+        ax.set_xlim([0, w])
+        ax.set_ylim([0, 160])
+        ax.set_xticks([i * 50 for i in range(4)])
+        ax.set_yticks([i * 50 for i in range(4)])
+
         # # show illuminance change
         x = [i for i in range(im.shape[1])]
         y = im[center[0], :]
-        plt.plot(x, y, color="k")
+        ax.plot(x, y, color="k", linewidth=ps.LineWidth, label="actual")
 
         # # show prediction
         z_pred = z_pred.reshape(h, w)
         y_pred = z_pred[center[0], :]
-        plt.plot(x, y_pred, color="b")
+        ax.plot(x, y_pred, color="b", linewidth=ps.LineWidth, label="model")
 
-        dir_path = "./output/temp/fitting/gaussian"
-        mkdir(dir_path)
-        plt.savefig(dir_path + "/tomography.png")
+        fig_path = "./output/temp/fitting/gaussian"
+        fig_name = "tomography"
+        pu.save_fig2(fig, fig_path + "/jpg", fig_name, "jpg")
+        pu.save_fig2(fig, fig_path + "/pdf", fig_name, "pdf")
+
+        plt.close(fig)
 
         return center, sigma, fwhm
 
@@ -140,19 +160,37 @@ class ModelFitting:
         # prediction
         z_pred = model.func(x, y, **result.best_values)
 
+        # plot log
+        pu.set_base_profiles(plt)
+
+        fig = plt.figure(figsize=(1.5, 1.5), dpi=ps.FigDPI)
+        ax = fig.add_subplot(111)
+        pu.set_base_axes_profiles(ax)
+
+        ax.set_xlabel("x [pixel]")
+        ax.set_ylabel("Luminance (y=center-y)")
+
+        ax.set_xlim([0, w])
+        ax.set_ylim([0, 160])
+        ax.set_xticks([i * 50 for i in range(4)])
+        ax.set_yticks([i * 50 for i in range(4)])
+
         # # show illuminance change
         x = [i for i in range(im.shape[1])]
         y = im[center[0], :]
-        plt.plot(x, y, color="k")
+        ax.plot(x, y, color="k", linewidth=ps.LineWidth, label="actual")
 
         # # show prediction
         z_pred = z_pred.reshape(h, w)
         y_pred = z_pred[center[0], :]
-        plt.plot(x, y_pred, color="b")
+        ax.plot(x, y_pred, color="b", linewidth=ps.LineWidth, label="model")
 
-        dir_path = "./output/temp/fitting/quadratic"
-        mkdir(dir_path)
-        plt.savefig(dir_path + "/tomography_quadratic.png")
+        fig_path = "./output/temp/fitting/quadratic"
+        fig_name = "tomography_quadratic"
+        pu.save_fig2(fig, fig_path + "/jpg", fig_name, "jpg")
+        pu.save_fig2(fig, fig_path + "/pdf", fig_name, "pdf")
+
+        plt.close(fig)
 
         return center, radius
 
