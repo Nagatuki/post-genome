@@ -267,7 +267,7 @@ def main():
 
     # # get diffusivity coefficients
     D = calc_diffusivity_uniform_beam(fluorescence, radius)
-    print(D)
+    print("Diffusivity coef: ", D)
 
 
 if __name__ == "__main__":
