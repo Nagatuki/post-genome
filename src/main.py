@@ -223,13 +223,13 @@ def plot_fluorescence(
     """plot a fluorescence change"""
     pu.set_base_profiles(plt)
 
-    fig = plt.figure(figsize=(1.5, 1.5), dpi=ps.FigDPI)
+    fig = plt.figure(figsize=(2, 1.5), dpi=ps.FigDPI)
     ax = fig.add_subplot(111)
     pu.set_base_axes_profiles(ax)
 
     ax.plot(time, fluorescence_list, linewidth=ps.LineWidth, color="tab:green")
     ax.set_xlim([0, 19])
-    ax.set_xticks([i for i in range(0, time[-1], 2)])
+    ax.set_xticks([i * 2 for i in range(10)])
     ax.set_xlabel("Time [sec]")
     ax.set_ylabel("Fluorescence intensity")
 
