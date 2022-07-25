@@ -252,18 +252,18 @@ def main():
 
     # find ROI
     center, radius = find_roi(imgs, True)
-    center_q, radius_q = find_roi_quadratic(imgs, False)
+    # center_q, radius_q = find_roi_quadratic(imgs, False)
 
     # examine_roi(imgs, center, sigma)
 
     # get fluorescence change
     time = np.arange(img_size) * 1  # dt = 1
     fluorescence = calc_fluorescence(imgs, center, radius)
-    fluorescence_q = calc_fluorescence(imgs, center_q, radius_q)
+    # fluorescence_q = calc_fluorescence(imgs, center_q, radius_q)
 
     # # plot fluorescence change
     plot_fluorescence(time, fluorescence, "./output/result/gaussian", "fluorescence")
-    plot_fluorescence(time, fluorescence_q, "./output/result/quadratic", "fluorescence")
+    # plot_fluorescence(time, fluorescence_q, "./output/result/quadratic", "fluorescence")
 
     # # get diffusivity coefficients
     D = calc_diffusivity_uniform_beam(fluorescence, radius)
