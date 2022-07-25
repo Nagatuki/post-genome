@@ -10,7 +10,7 @@ def moving_average(im, ksize=3):
 
 
 def weighted_average(im, ksize=3, sigma=2):
-    ret_im = cv2.GaussianBlur(img, (ksize, ksize), sigma, sigma)
+    ret_im = cv2.GaussianBlur(im, (ksize, ksize), sigma, sigma)
     return ret_im
 
 
