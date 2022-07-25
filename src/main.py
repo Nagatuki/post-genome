@@ -5,6 +5,8 @@ import numpy as np
 
 import imfilter
 from fitting import ModelFitting
+from paperplot import plotsetting as ps
+from paperplot import plotutils as pu
 from utils import mkdir
 
 
@@ -215,17 +217,24 @@ def examine_roi(imgs, center, sigma):
     cv2.imwrite("./output/temp/illuminance/roi_sigma_samples.png", img_cpy)
 
 
-def plot_fluorescence(time: list[int], fluorescence_list: list[float]):
+def plot_fluorescence(
+    time: list[int], fluorescence_list: list[float], fig_path: str, fig_name: str
+):
     """plot a fluorescence change"""
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.plot(time, fluorescence_list, color="tab:green")
+    pu.set_base_profiles(plt)
+
+    fig = plt.figure(figsize=(1.5, 1.5), dpi=ps.FigDPI)
+    ax = fig.add_subplot(111)
+    pu.set_base_axes_profiles(ax)
+
+    ax.plot(time, fluorescence_list, linewidth=ps.LineWidth, color="tab:green")
     ax.set_xlim([0, 19])
     ax.set_xticks([i for i in range(0, time[-1], 2)])
-    ax.set_ylim([0, 100])
     ax.set_xlabel("Time [sec]")
-    ax.set_ylabel("Fluorescence")
-    plt.savefig("./output/result/fluorescence.png")
+    ax.set_ylabel("Fluorescence intensity")
+
+    pu.save_fig2(fig, fig_path + "/jpg", fig_name, "jpg")
+    pu.save_fig2(fig, fig_path + "/pdf", fig_name, "pdf")
 
 
 def plot_fluorescence_compare(time: list[int], fluorescence_list: list[list[float]]):
@@ -299,7 +308,15 @@ def main():
 
     # examine_roi(imgs, center, sigma)
 
-    # get fluorescence
+    # get fluorescence change
+    time = np.arange(img_size) * 1  # dt = 1
+    fluorescence = calc_fluorescence(imgs, center, radius)
+    fluorescence_q = calc_fluorescence(imgs, center_q, radius_q)
+
+    # # plot fluorescence change
+    plot_fluorescence(time, fluorescence, "./output/result/gaussian", "fluorescence")
+    plot_fluorescence(time, fluorescence_q, "./output/result/quadratic", "fluorescence")
+
     # coef_list = [0.5, 1, 2]
 
     # fluorescence_list = []
@@ -310,10 +327,6 @@ def main():
     #     fluorescence_list.append(fluore)
     #     fluorescence_ratio_list.append(fluore_ratio)
 
-    # # plot fluorescence change
-    # dt = 1  # sec
-    # time = np.arange(img_size) * dt
-    # plot_fluorescence(time, fluorescence_ratio_list[1])
     # plot_fluorescence_compare(time, fluorescence_ratio_list)
 
     # # get diffusivity coefficients
