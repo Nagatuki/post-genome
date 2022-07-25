@@ -104,7 +104,7 @@ def find_roi(imgs, heavy=False):
 
     # # check fitting result
     im_diff_cpy = im_diff.copy()
-    box = [[center[1], center[0]], [sigma[1], sigma[0]], 0.0]
+    box = [[center[1], center[0]], [2 * sigma[1], 2 * sigma[0]], 0.0]
     cv2.ellipse(im_diff_cpy, box, color=255, thickness=1)
     cv2.imwrite("./output/temp/find_roi/found_roi_sigma.png", im_diff_cpy)
 
