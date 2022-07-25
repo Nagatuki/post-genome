@@ -3,7 +3,7 @@ import lmfit
 import matplotlib.pyplot as plt
 import numpy as np
 
-import filter
+import imfilter
 from fitting import ModelFitting
 from utils import mkdir
 
@@ -19,8 +19,8 @@ def denoise(imgs: list[np.ndarray], log: bool = False) -> list[np.ndarray]:
         list[np.ndarray]: 処理後の画像群
     """
     ksize = 7  # フィルタサイズ
-    # filtered_imgs = [filter.moving_average(img, ksize=ksize) for img in imgs]
-    filtered_imgs = [filter.moving_average(img, ksize=ksize) for img in imgs]
+    # filtered_imgs = [imfilter.moving_average(img, ksize=ksize) for img in imgs]
+    filtered_imgs = [imfilter.moving_average(img, ksize=ksize) for img in imgs]
 
     if log:
         dir_path = "./output/temp/denoise"

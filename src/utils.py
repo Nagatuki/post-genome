@@ -3,7 +3,7 @@ import os
 import cv2
 from PIL import Image
 
-import filter
+import imfilter
 
 
 def mkdir(path):
@@ -55,13 +55,13 @@ def convert_tiff_to_png():
         cv2.imwrite(dir_path + "{:0>2}.png".format(i + 1), raw_img)
 
         # moving average
-        img = filter.moving_average(raw_img, ksize=9)
+        img = imfilter.moving_average(raw_img, ksize=9)
         dir_path = "./output/temp/mov_ave/"
         mkdir(dir_path)
         cv2.imwrite(dir_path + "{:0>2}.png".format(i + 1), img)
 
         # gaussian
-        img = filter.gaussian_filter(raw_img, ksize=9, sigma=1.7)
+        img = imfilter.gaussian_filter(raw_img, ksize=9, sigma=1.7)
         dir_path = "./output/temp/gaussian/"
         mkdir(dir_path)
         cv2.imwrite(dir_path + "{:0>2}.png".format(i + 1), img)
