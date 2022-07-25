@@ -75,8 +75,8 @@ class ModelFitting:
         ax = fig.add_subplot(111)
         pu.set_base_axes_profiles(ax)
 
-        ax.set_xlabel("x [pixel]")
-        ax.set_ylabel("Luminance (y=center-y)")
+        ax.set_xlabel("y [pixel]")
+        ax.set_ylabel("Luminance (x=center-x)")
 
         ax.set_xlim([0, w])
         ax.set_ylim([0, 160])
@@ -195,17 +195,17 @@ class ModelFitting:
         return center, radius
 
     @staticmethod
-    def fluorescence_func(t: float, A: float, K: float, C: float):
-        return A * (1 - np.exp(-1 * t / K)) + C
+    def fluorescence_func(t: float, A: float, T: float, C: float):
+        return A * (1 - np.exp(-1 * t / T)) + C
 
     @staticmethod
-    def diffusion_axelrod1976(time: list[float], fluorescence: list[float]):
+    def fluorescence_fitting(time: list[float], fluorescence: list[float]):
         # create a model and fit
         model = lmfit.Model(ModelFitting.fluorescence_func, independent_vars=["t"])
 
         params = model.make_params()
         params["A"].set(value=10, vary=True)
-        params["K"].set(value=10, vary=True)
+        params["T"].set(value=10, vary=True)
         params["C"].set(value=fluorescence[0], vary=False)
 
         result = model.fit(fluorescence, t=time, params=params)
