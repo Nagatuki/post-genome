@@ -58,87 +58,153 @@ def convert_tiff_to_png():
         cv2.imwrite(dir_path + "{:0>2}.png".format(i + 1), img)
 
 
-def calc_fluorescence(imgs, center: tuple[int], radius: float) -> tuple[list, list]:
+def denoise(imgs: list[np.ndarray], log: bool = False) -> list[np.ndarray]:
+    """画像のノイズ除去
+    フィルタサイズ5の移動平均フィルタを適用する.
+
+    Args:
+        imgs (list[np.ndarray]): 画像群
+
+    Returns:
+        list[np.ndarray]: 処理後の画像群
+    """
+    ksize = 7  # フィルタサイズ
+    # filtered_imgs = [filter.moving_average(img, ksize=ksize) for img in imgs]
+    filtered_imgs = [filter.moving_average(img, ksize=ksize) for img in imgs]
+
+    if log:
+        dir_path = "./output/temp/denoise"
+        mkdir(dir_path)
+
+        for i, img in enumerate(filtered_imgs):
+            file_name = dir_path + "/filtered{:0>2}.png".format(i + 1)
+            cv2.imwrite(file_name, img)
+
+    return filtered_imgs
+
+
+def find_roi(imgs: list[np.ndarray], log: bool = False) -> tuple[tuple, float]:
+    """ROIの算出
+    ROIの検索にはガウス関数のフィッティングを行っている.
+
+    Args:
+        imgs (list[np.ndarray]): 画像群
+        log (bool, optional): 解析結果のログ出力の有無. Defaults to False.
+
+    Returns:
+        tuple[tuple, float]: 算出されたROI. "中心点, 半径"
+    """
+    # choose before and after bleaching figures
+    im_pre, im_post = imgs[1], imgs[2]
+
+    # get fluorescence changes
+    im_diff = im_pre - im_post
+
+    # gaussian fitting
+    center, sigma, fwhm = ModelFitting.gaussian2d_fit(im_diff, report=True)
+
+    # determine bleaching radius
+    # radius = sigma  # 1SD
+    radius = sigma * 2  # 2SD
+    # radius = fwhm / 2  # hwhm
+
+    if log:
+        # output dir
+        dir_path = "./output/temp/find_roi"
+        mkdir(dir_path)
+
+        # fluorescence changes
+        cv2.imwrite(dir_path + "/im_diff.png", im_diff)
+
+        # fitting result
+        im_diff_cpy = im_diff.copy()
+        box = [[center[1], center[0]], [2 * sigma, 2 * sigma], 0.0]
+        cv2.ellipse(im_diff_cpy, box, color=255, thickness=1)
+        cv2.imwrite(dir_path + "/found_roi_sigma.png", im_diff_cpy)
+
+        im_diff_cpy = im_diff.copy()
+        box = [[center[1], center[0]], [4 * sigma, 4 * sigma], 0.0]
+        cv2.ellipse(im_diff_cpy, box, color=255, thickness=1)
+        cv2.imwrite(dir_path + "/found_roi_2sigma.png", im_diff_cpy)
+
+        im_diff_cpy = im_diff.copy()
+        box = [[center[1], center[0]], [fwhm, fwhm], 0.0]
+        cv2.ellipse(im_diff_cpy, box, color=255, thickness=1)
+        cv2.imwrite(dir_path + "/found_roi_fwhm.png", im_diff_cpy)
+
+    return center, radius
+
+
+def find_roi_quadratic(imgs, log: bool = False) -> tuple[tuple, float]:
+    """ROIの算出
+    ROIの検索には二次関数様の関数でフィッティングを行っている.
+
+    Args:
+        imgs (list[np.ndarray]): 画像群
+        log (bool, optional): 解析結果のログ出力の有無. Defaults to False.
+
+    Returns:
+        tuple[tuple, float]: 算出されたROI. "中心点, 半径"
+    """
+    # choose before and after bleaching figures
+    im_pre, im_post = imgs[1], imgs[2]
+
+    # get fluorescence changes
+    im_diff = im_pre - im_post
+
+    # quadratic fitting
+    center, radius = ModelFitting.quadratic2d_fit2(im_diff, True)
+
+    if log:
+        # output dir
+        dir_path = "./output/temp/find_roi_quadratic"
+        mkdir(dir_path)
+
+        # fluorescence changes
+        cv2.imwrite(dir_path + "/im_diff.png", im_diff)
+
+        # check fitting result
+        im_diff_cpy = im_diff.copy()
+        cv2.circle(im_diff_cpy, [center[1], center[0]], radius, color=255, thickness=1)
+        cv2.imwrite(dir_path + "/found_roi_radius.png", im_diff_cpy)
+
+    return center, radius
+
+
+def calc_fluorescence(
+    imgs: np.ndarray, center: tuple[int], radius: float
+) -> list[float]:
+    """画像ROI中の蛍光強度変化を導出
+
+    Args:
+       imgs (np.ndarray): 画像群
+        center (tuple[int]): ROI中心
+        radius (float): ROI半径
+
+    Returns:
+        list[float]: 蛍光強度の変遷
+    """
     fluorescence_list = []
 
     for img in imgs:
-        sum_illuminance = 0
+        sum_fluorescence = 0
         count_pixel = 0
-
-        h, w = img.shape[0], img.shape[1]
-        for x in range(h):
-            for y in range(w):
+        for x in range(img.shape[0]):
+            for y in range(img.shape[1]):
                 dx = x - center[0]
                 dy = y - center[1]
 
                 if dx ** 2 + dy ** 2 <= radius ** 2:
-                    sum_illuminance += img[x, y]
+                    sum_fluorescence += img[x, y]
                     count_pixel += 1
 
-        fluorescence_list.append(sum_illuminance / count_pixel)
+        fluorescence_list.append(sum_fluorescence / count_pixel)
 
-    fluorescence_ratio_list = []
-    base = fluorescence_list[0]
-    for e in fluorescence_list:
-        fluorescence_ratio_list.append(e / base * 100)
-
-    return fluorescence_list, fluorescence_ratio_list
+    return fluorescence_list
 
 
-def find_roi(imgs, heavy=False):
-    im_pre, im_post = imgs[1], imgs[2]
-
-    # moving average filter
-    ksize = 5
-    im_pre_filtered = filter.moving_average(im_pre, ksize=ksize)
-    im_post_filtered = filter.moving_average(im_post, ksize=ksize)
-
-    # calc fluorescence difference
-    im_diff = im_pre_filtered - im_post_filtered
-    mkdir("./output/temp/find_roi")
-    cv2.imwrite("./output/temp/find_roi/im_diff.png", im_diff)
-
-    # gaussian fitting
-    # center, sigma, fwhm = ModelFitting.gaussian2d_fit(im_diff)
-    center, sigma, fwhm = ModelFitting.gaussian2d_fit2(im_diff)
-
-    # # check fitting result
-    im_diff_cpy = im_diff.copy()
-    box = [[center[1], center[0]], [2 * sigma[1], 2 * sigma[0]], 0.0]
-    cv2.ellipse(im_diff_cpy, box, color=255, thickness=1)
-    cv2.imwrite("./output/temp/find_roi/found_roi_sigma.png", im_diff_cpy)
-
-    im_diff_cpy = im_diff.copy()
-    box = [[center[1], center[0]], [fwhm[1], fwhm[0]], 0.0]
-    cv2.ellipse(im_diff_cpy, box, color=255, thickness=1)
-    cv2.imwrite("./output/temp/find_roi/found_roi_fwhm.png", im_diff_cpy)
-
-    return center, sigma
-
-
-def find_roi2(imgs, heavy=False):
-    im_pre, im_post = imgs[1], imgs[2]
-
-    # moving average filter
-    ksize = 5
-    im_pre_filtered = filter.moving_average(im_pre, ksize=ksize)
-    im_post_filtered = filter.moving_average(im_post, ksize=ksize)
-
-    # calc fluorescence difference
-    im_diff = im_pre_filtered - im_post_filtered
-
-    mkdir("./output/temp/find_roi")
-    cv2.imwrite("./output/temp/find_roi/im_diff.png", im_diff)
-
-    # gaussian fitting
-    center, radius = ModelFitting.quadratic2d_fit2(im_diff, True)
-
-    # # check fitting result
-    im_diff_cpy = im_diff.copy()
-    cv2.circle(im_diff_cpy, [center[1], center[0]], radius, color=255, thickness=1)
-    cv2.imwrite("./output/temp/find_roi/found_roi_radius.png", im_diff_cpy)
-
-    return center, [radius, radius]
+def diffusivity_coefficients(fluorescence: list[float]):
+    pass
 
 
 def examine_roi(imgs, center, sigma):
@@ -274,44 +340,47 @@ def main():
     file_paths = ["./HQ/frap{:0>2}.tiff".format(i + 1) for i in range(img_size)]
     imgs = [cv2.imread(file_path, cv2.IMREAD_GRAYSCALE) for file_path in file_paths]
 
+    # denoise
+    imgs = denoise(imgs, log=True)
+
     # find ROI
-    # center, sigma = find_roi(imgs)
-    center, sigma = find_roi2(imgs)
+    center, radius = find_roi(imgs, True)
+    center_q, radius_q = find_roi_quadratic(imgs, True)
 
     # examine_roi(imgs, center, sigma)
 
     # get fluorescence
-    coef_list = [0.5, 1, 2]
+    # coef_list = [0.5, 1, 2]
 
-    fluorescence_list = []
-    fluorescence_ratio_list = []
-    for coef in coef_list:
-        radius = coef * min(sigma)
-        fluore, fluore_ratio = calc_fluorescence(imgs, center, radius)
-        fluorescence_list.append(fluore)
-        fluorescence_ratio_list.append(fluore_ratio)
+    # fluorescence_list = []
+    # fluorescence_ratio_list = []
+    # for coef in coef_list:
+    #     radius = coef * min(sigma)
+    #     fluore, fluore_ratio = calc_fluorescence(imgs, center, radius)
+    #     fluorescence_list.append(fluore)
+    #     fluorescence_ratio_list.append(fluore_ratio)
 
-    # plot fluorescence change
-    dt = 1  # sec
-    time = np.arange(img_size) * dt
-    plot_fluorescence(time, fluorescence_ratio_list[1])
-    plot_fluorescence_compare(time, fluorescence_ratio_list)
+    # # plot fluorescence change
+    # dt = 1  # sec
+    # time = np.arange(img_size) * dt
+    # plot_fluorescence(time, fluorescence_ratio_list[1])
+    # plot_fluorescence_compare(time, fluorescence_ratio_list)
 
-    # get diffusivity coefficients
-    diff_coef_list = []
-    for coef, fluorescence in zip(coef_list, fluorescence_list):
-        radius = coef * min(sigma)
+    # # get diffusivity coefficients
+    # diff_coef_list = []
+    # for coef, fluorescence in zip(coef_list, fluorescence_list):
+    #     radius = coef * min(sigma)
 
-        fluorescence = fluorescence[2:]
-        time = np.arange(len(fluorescence)) * dt
-        result = ModelFitting.diffusion_axelrod1976(time, fluorescence)
+    #     fluorescence = fluorescence[2:]
+    #     time = np.arange(len(fluorescence)) * dt
+    #     result = ModelFitting.diffusion_axelrod1976(time, fluorescence)
 
-        plot_fluorescence_fitting(time, fluorescence, result, str(coef) + "sigma")
+    #     plot_fluorescence_fitting(time, fluorescence, result, str(coef) + "sigma")
 
-        D = calc_diffusivity_coefficients(radius, result["K"])
-        diff_coef_list.append(D)
+    #     D = calc_diffusivity_coefficients(radius, result["K"])
+    #     diff_coef_list.append(D)
 
-    print(diff_coef_list)
+    # print(diff_coef_list)
 
 
 if __name__ == "__main__":
