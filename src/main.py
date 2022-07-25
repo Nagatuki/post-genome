@@ -156,68 +156,6 @@ def calc_fluorescence(
     return fluorescence_list
 
 
-def diffusivity_coefficients(fluorescence: list[float]):
-    pass
-
-
-def examine_roi(imgs, center, sigma):
-    # find best radius
-    sigma_coefs = np.arange(0.2, 3.1, 0.2)
-    fluorescence_decrease = []
-    fluorescence_recovery = []
-    fluorescence_steady = []
-    for sigma_coef in sigma_coefs:
-        radius = [s * sigma_coef for s in sigma]
-        _, fluorescence_ratio_list = calc_fluorescence(imgs, center, radius)
-
-        decrease = 100 - fluorescence_ratio_list[2]
-        fluorescence_decrease.append(decrease)
-
-        recovery = fluorescence_ratio_list[-1] - fluorescence_ratio_list[2]
-        fluorescence_recovery.append(recovery)
-
-        fluorescence_steady.append(fluorescence_ratio_list[-1])
-
-    # # compare about fluorescence decrease
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.plot(sigma_coefs, fluorescence_decrease)
-    ax.set_xlabel("sigma coefficients")
-    ax.set_ylabel("Fluorescence decrease")
-
-    mkdir("./output/temp/fluorescence/")
-    plt.savefig("./output/temp/fluorescence/decrease.png")
-
-    # # compare about fluorescence recovery
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.plot(sigma_coefs, fluorescence_recovery)
-    ax.set_xlabel("sigma coefficients")
-    ax.set_ylabel("Fluorescence recovery")
-
-    mkdir("./output/temp/fluorescence/")
-    plt.savefig("./output/temp/fluorescence/recovery.png")
-
-    # # compare about fluorescence recovery
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    ax.plot(sigma_coefs, fluorescence_steady)
-    ax.set_xlabel("sigma coefficients")
-    ax.set_ylabel("Fluorescence at steady state")
-
-    mkdir("./output/temp/fluorescence/")
-    plt.savefig("./output/temp/fluorescence/steady_state.png")
-
-    # # plot each radius
-    img_cpy = imgs[2].copy()
-    sigma_coefs = np.arange(1, 4.1, 1)
-    for sigma_coef in sigma_coefs:
-        radius = [s * sigma_coef for s in sigma]
-        box = [[center[1], center[0]], [radius[1], radius[0]], 0.0]
-        cv2.ellipse(img_cpy, box, color=255, thickness=1)
-    cv2.imwrite("./output/temp/illuminance/roi_sigma_samples.png", img_cpy)
-
-
 def plot_fluorescence(
     time: list[int], fluorescence_list: list[float], fig_path: str, fig_name: str
 ):
@@ -326,18 +264,6 @@ def main():
     # # plot fluorescence change
     plot_fluorescence(time, fluorescence, "./output/result/gaussian", "fluorescence")
     plot_fluorescence(time, fluorescence_q, "./output/result/quadratic", "fluorescence")
-
-    # coef_list = [0.5, 1, 2]
-
-    # fluorescence_list = []
-    # fluorescence_ratio_list = []
-    # for coef in coef_list:
-    #     radius = coef * min(sigma)
-    #     fluore, fluore_ratio = calc_fluorescence(imgs, center, radius)
-    #     fluorescence_list.append(fluore)
-    #     fluorescence_ratio_list.append(fluore_ratio)
-
-    # plot_fluorescence_compare(time, fluorescence_ratio_list)
 
     # # get diffusivity coefficients
     D = calc_diffusivity_uniform_beam(fluorescence, radius)
