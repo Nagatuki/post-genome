@@ -7,75 +7,6 @@ from utils import mkdir
 
 class ModelFitting:
     @staticmethod
-    def gaussian2d_fit(im, report=False):
-        """2次元ガウス関数でフィッティング
-        lmfitで実装済みのモデルを使用. sigmaはx, y軸で別.
-
-        Args:
-            im (numpy.ndarray): フィッティングする画像
-            report (bool, optional): 詳細な結果を出力する. Defaults to False.
-
-        Returns:
-            tuple: 結果. "中心, シグマ, 半値幅"
-        """
-        h, w = im.shape[0], im.shape[1]
-        z = im.flatten().astype(np.float64)
-
-        x, y = [], []
-        for ix in range(h):
-            for iy in range(w):
-                x.append(ix)
-                y.append(iy)
-        x = np.array(x, dtype=np.float64)
-        y = np.array(y, dtype=np.float64)
-
-        # create a model and fit
-        model = lmfit.models.Gaussian2dModel()
-
-        params = model.make_params()
-        params["amplitude"].set(value=128, min=0, vary=True)
-        params["centerx"].set(value=h // 2, min=0, max=h, vary=True)
-        params["centery"].set(value=w // 2, min=0, max=w, vary=True)
-        params["sigmax"].set(value=50, min=5, vary=True)
-        params["sigmay"].set(value=50, min=5, vary=True)
-
-        result = model.fit(z, x=x, y=y, params=params)
-
-        # log result
-        if report:
-            lmfit.report_fit(result)
-
-        # organizing results
-        result_dict = result.params.valuesdict()
-        amp = result_dict["amplitude"]
-        center = result_dict["centerx"], result_dict["centery"]
-        sigma = result_dict["sigmax"], result_dict["sigmay"]
-        fwhm = result_dict["fwhmx"], result_dict["fwhmy"]
-
-        amp = round(amp)
-        center = [round(c) for c in center]
-        sigma = [round(s) for s in sigma]
-        fwhm = [round(f) for f in fwhm]
-
-        # prediction
-        z_pred = model.func(x, y, **result.best_values)
-
-        # # show illuminance change
-        x = [i for i in range(im.shape[1])]
-        y = im[center[0], :]
-        plt.plot(x, y, color="k")
-
-        # # show prediction
-        z_pred = z_pred.reshape(h, w)
-        y_pred = z_pred[center[0], :]
-        plt.plot(x, y_pred, color="b")
-
-        mkdir("./output/temp/fitting")
-        plt.savefig("./output/temp/fitting/tomography.png")
-
-        return center, sigma, fwhm
-
-    @staticmethod
     def gaussian2D(x, y, amplitude, centerx, centery, sigma):
         """オリジナルの2次元ガウス関数モデル"""
         dx, dy = centerx - x, centery - y
@@ -84,7 +15,7 @@ class ModelFitting:
         return coef * np.exp(index)
 
     @staticmethod
-    def gaussian2d_fit2(im, report=False):
+    def gaussian2d_fit(im, report=False):
         """2次元ガウス関数でフィッティング
         独自のモデルを使用. sigmaはx, y軸で共通.
 
@@ -129,8 +60,8 @@ class ModelFitting:
         fwhm = np.sqrt(np.log(2) * 2 * sigma * sigma) * 2
 
         center = [round(c) for c in center]
-        sigma = [round(sigma), round(sigma)]
-        fwhm = [round(fwhm), round(fwhm)]
+        sigma = round(sigma)
+        fwhm = round(fwhm)
 
         # prediction
         z_pred = model.func(x, y, **result.best_values)
@@ -145,8 +76,9 @@ class ModelFitting:
         y_pred = z_pred[center[0], :]
         plt.plot(x, y_pred, color="b")
 
-        mkdir("./output/temp/fitting")
-        plt.savefig("./output/temp/fitting/tomography.png")
+        dir_path = "./output/temp/fitting/gaussian"
+        mkdir(dir_path)
+        plt.savefig(dir_path + "/tomography.png")
 
         return center, sigma, fwhm
 
@@ -218,8 +150,9 @@ class ModelFitting:
         y_pred = z_pred[center[0], :]
         plt.plot(x, y_pred, color="b")
 
-        mkdir("./output/temp/fitting/quadratic")
-        plt.savefig("./output/temp/fitting/quadratic/tomography_quadratic.png")
+        dir_path = "./output/temp/fitting/quadratic"
+        mkdir(dir_path)
+        plt.savefig(dir_path + "/tomography_quadratic.png")
 
         return center, radius
 
