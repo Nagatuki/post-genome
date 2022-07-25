@@ -89,7 +89,7 @@ def find_roi(imgs, heavy=False):
     im_pre, im_post = imgs[1], imgs[2]
 
     # moving average filter
-    ksize = 9
+    ksize = 5
     im_pre_filtered = filter.moving_average(im_pre, ksize=ksize)
     im_post_filtered = filter.moving_average(im_post, ksize=ksize)
 
@@ -120,7 +120,7 @@ def find_roi2(imgs, heavy=False):
     im_pre, im_post = imgs[1], imgs[2]
 
     # moving average filter
-    ksize = 9
+    ksize = 5
     im_pre_filtered = filter.moving_average(im_pre, ksize=ksize)
     im_post_filtered = filter.moving_average(im_post, ksize=ksize)
 
